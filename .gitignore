@@ -1,0 +1,27 @@
+# secrets & personal data (never commit)
+password.hash
+.secret_key
+totp.secret
+viewers.json
+settings.json
+settings.bak
+telegram-alerts.bat
+certs/
+captures/
+*.log
+# runtime
+venv/
+__pycache__/
+*.pyc
+.fxcache/
+models/
+# your media
+music/*
+sounds/*
+!music/.gitkeep
+!sounds/.gitkeep
+# android build
+android/HomeRemote/.gradle/
+android/HomeRemote/build/
+android/HomeRemote/app/build/
+android/HomeRemote/local.properties

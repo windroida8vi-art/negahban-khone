@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/s/manifest.json">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="/s/icon-192.png">
+<title>پخش‌کننده خانه</title>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--line:#262a33;--text:#eceef2;--mute:#8b92a1;--acc:#4ade80}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--text);font-family:Tahoma,system-ui,sans-serif;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;max-width:560px;margin:auto}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+#login{margin:auto;padding:24px;width:100%;display:none;text-align:center}
+#login input{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);margin:14px 0;text-align:center;font-size:16px}
+#login button{background:var(--acc);color:#000;padding:12px 28px;border-radius:10px;font-weight:bold}
+#err{color:#f87171;min-height:22px}
+#app{display:none;flex-direction:column;height:100vh;height:100dvh}
+.now{position:relative;padding:22px 20px 12px;background:linear-gradient(160deg,#1b3a2a,var(--card) 65%);border-bottom:1px solid var(--line)}
+.eq{position:absolute;top:24px;left:20px;display:none;gap:3px;align-items:flex-end;height:18px}.eq.on{display:flex}.eq i{width:3px;background:var(--acc);border-radius:2px;animation:eq .9s infinite ease-in-out}.eq i:nth-child(2){animation-delay:.2s}.eq i:nth-child(3){animation-delay:.4s}@keyframes eq{0%,100%{height:4px}50%{height:18px}}
+#title{font-size:19px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#artist{color:var(--mute);font-size:14px;min-height:20px;margin-top:2px}
+.row{display:flex;align-items:center;gap:10px}
+.time{font-size:12px;color:var(--mute);width:40px;text-align:center;direction:ltr}
+input[type=range]{flex:1;accent-color:var(--acc);direction:ltr}
+.ctrl{display:flex;justify-content:center;align-items:center;gap:6px;margin:10px 0 4px}
+.ctrl button{font-size:24px;width:48px;height:48px;border-radius:50%}
+.ctrl .big{background:var(--acc);color:#000;width:60px;height:60px;font-size:26px}
+.ctrl .tog{font-size:18px;color:var(--mute)}
+.ctrl .tog.on{color:var(--acc)}
+.vol{padding-top:6px}
+#q{margin:12px 16px 6px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:15px}
+#list{flex:1;overflow-y:auto;padding:0 8px 16px}
+.item{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:right;padding:11px 12px;border-radius:10px}
+.item:active{background:var(--card)}
+.item.cur{background:var(--card);color:var(--acc)}
+.item span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item small{color:var(--mute);direction:ltr;flex-shrink:0}
+.tools{display:flex;flex-wrap:wrap;gap:8px;padding:10px 16px 0}.tools button{flex:1 1 30%;padding:10px 4px;border-radius:10px;background:var(--card);border:1px solid var(--line);font-size:14px}.tools button.on{background:var(--acc);color:#000;border-color:var(--acc)}#cam{display:none;width:calc(100% - 32px);margin:10px 16px 0;border-radius:10px;background:#000}
+#desk{display:none;margin:10px 16px 0}#wrap{position:relative}#cur{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#f33;border:2px solid #fff;pointer-events:none;display:none}#scr{outline:none}#fm{display:none;margin-top:8px;background:var(--card);border-radius:10px;padding:8px;max-height:280px;overflow:auto;font-size:13px}#fm button,#fm a{display:block;width:100%;text-align:right;padding:7px;color:var(--text);text-decoration:none;border-radius:6px}#fm small{color:var(--mute)}#scr{width:100%;border-radius:10px;background:#000;touch-action:none;user-select:none;-webkit-user-select:none;display:block}.keys{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.keys button{padding:8px 12px;border-radius:8px;background:var(--card);border:1px solid var(--line);font-size:13px}.keys input{flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--text)}.keys .danger{color:#f87171}
+.bar{display:flex;justify-content:space-between;padding:0 16px;color:var(--mute);font-size:13px}
+</style>
+</head>
+<body>
+<div id="login">
+  <h2>🎵 پخش‌کننده خانه</h2>
+  <input id="un" type="text" placeholder="نام کاربری" autocomplete="username" autocapitalize="none" style="margin-bottom:0">
+  <input id="pw" type="password" placeholder="رمز عبور" autocomplete="current-password">
+  <input id="code" type="text" inputmode="numeric" maxlength="6" placeholder="کد ۶ رقمی Authenticator" autocomplete="one-time-code" style="display:none">
+  <div id="err"></div>
+  <button onclick="login()">ورود</button>
+  <div style="color:var(--mute);font-size:12px;margin-top:14px">اگه رمز رو فراموش کردی: روی کامپیوتر خونه set-password.bat رو اجرا کن</div>
+</div>
+
+<div id="app">
+  <div id="alertbar" style="display:none;background:#7f1d1d;padding:10px;text-align:center;font-weight:bold" onclick="this.style.display='none'"></div>
+  <div class="now">
+    <span class="eq" id="eq"><i></i><i></i><i></i></span>
+    <div id="title">—</div>
+    <div id="artist"></div>
+    <div class="row" style="margin-top:12px">
+      <span class="time" id="pos">0:00</span>
+      <input type="range" id="seek" min="0" max="1" step="0.1" value="0">
+      <span class="time" id="dur">0:00</span>
+    </div>
+    <div class="ctrl">
+      <button class="tog" id="shuf" onclick="post('shuffle')">🔀</button>
+      <button onclick="post('prev')">⏮</button>
+      <button class="big" id="pp" onclick="post('toggle')">▶</button>
+      <button onclick="post('next')">⏭</button>
+      <button class="tog" id="rep" onclick="post('repeat')">🔁</button>
+    </div>
+    <div class="row vol">
+      <span>🔈</span>
+      <input type="range" id="vol" min="0" max="1" step="0.01">
+      <span>🔊</span>
+    </div>
+  </div>
+  <div class="tools">
+    <button id="bTalk" onclick="toggleTalk()">🎤 صحبت</button>
+    <button id="bListen" onclick="toggleListen()">👂 گوش دادن</button>
+    <button id="bCam" onclick="toggleCam()">📷 دوربین</button>
+    <button id="bNvr" onclick="nvrClick()">📹 NVR</button>
+    <button id="bDesk" onclick="toggleDesk()">🖥 دسکتاپ</button>
+    <button id="bSec" onclick="toggleSec()">🛡 امنیت</button>
+    <button id="bSys" onclick="toggleSys()">🔊 صدای سیستم</button>
+    <button id="bLocal" onclick="toggleLocal()">🎧 شنیدن همزمان</button>
+    <button onclick="logout()">🔒 خروج</button>
+    <button onclick="logoutAll()">⛔ خروج همه‌ی دستگاه‌ها</button>
+  </div>
+  <img id="cam" alt="">
+  <div id="nvrbox" style="display:none;margin:10px 16px 0"><div class="tools" id="nvrbtns" style="padding:0"></div><div id="nvrchs"></div></div>
+  <div id="sec" style="display:none;margin:10px 16px 0">
+    <div class="keys">
+      <button id="sArm" onclick="secSet({armed: !secS.armed})">🛡 مسلح: خاموش</button>
+      <button id="sSens" onclick="secCycleSens()">حساسیت: متوسط</button>
+      <button id="sAuto" onclick="secCycleAuto()">واکنش: هیچ</button>
+    </div>
+    <div class="keys">
+      <button id="sSiren" class="danger" onclick="secSet({siren: !secS.siren})">🚨 آژیر</button>
+      <button id="sPres" onclick="secPres()">🏠 شبیه‌سازی حضور: خاموش</button>
+      <input id="pFrom" type="number" min="0" max="23" value="17" style="max-width:56px;flex:none"> تا
+      <input id="pTo" type="number" min="1" max="24" value="23" style="max-width:56px;flex:none">
+    </div>
+    <div class="keys" style="border:1px solid var(--acc);border-radius:10px;padding:6px">
+      <div style="width:100%;font-weight:bold">📹 NVR (دوربین‌های اصلی، دقیق‌تر از وب‌کم)</div>
+      <button id="sNvr" onclick="secSet({nvr: {on: !(secS.nvr && secS.nvr.on)}})">📹 تشخیص NVR: خاموش</button>
+      <button id="sNvrHd" onclick="secSet({nvr: {hd: !(secS.nvr && secS.nvr.hd)}})">🎞 HD: خاموش</button>
+      <button id="sNvrEn" onclick="secSet({nvr: {enhance: !(secS.nvr && secS.nvr.enhance)}})">✨ بهبود: خاموش</button>
+      <div id="nvrst" style="width:100%;font-size:12px;color:var(--mute)"></div>
+    </div>
+    <div class="keys">
+      <button id="bAway" onclick="awayMode()">🚪 حالت بیرونم</button>
+      <button onclick="homeMode()">🏠 رسیدم خونه</button>
+    </div>
+    <div class="keys">
+      <input id="sayi" placeholder="متن برای گفتن با اسپیکر خونه (انگلیسی بهتره)…">
+      <button onclick="say()">🗣 بگو</button>
+    </div>
+    <div class="keys">
+      <button onclick="$('sayi').value='Who is there? I can see you.'">Who is there?</button>
+      <button onclick="$('sayi').value='This house is monitored. Please leave immediately.'">Monitored</button>
+      <button onclick="$('sayi').value='Someone is home.'">Someone is home</button>
+    </div>
+    <div class="keys"><div style="width:100%;color:var(--mute);font-size:12px">✨ حالت سرگرمی: وقتی آدم دیده شد گاهی (نه همیشه) یه واکنش تصادفی نشون میده: عوض کردن آهنگ، کم/زیاد شدن صدا، زنگ در، تق‌تق، حرف زدن...</div></div>
+    <div class="keys">
+      <button id="fOn" onclick="funSet({on: !secS.fun.on})">✨ سرگرمی: خاموش</button>
+      <button id="fLvl" onclick="funSet({level: secS.fun.level === 1 ? 2 : 1})">شدت: ملایم</button>
+      <button id="fFreq" onclick="funCycle()">تکرار: متوسط</button>
+    </div>
+    <div class="keys">
+      ساعت <input id="fFrom" type="number" min="0" max="23" value="10" style="max-width:56px;flex:none"> تا
+      <input id="fTo" type="number" min="1" max="24" value="22" style="max-width:56px;flex:none">
+      <button onclick="funSet({start: +$('fFrom').value, end: +$('fTo').value})">ثبت</button>
+    </div>
+    <div class="keys">
+      <button onclick="secSet({test:'random'})">🎲 یه واکنش تصادفی</button>
+      <button onclick="secSet({test:'doorbell'})">🔔</button><button onclick="secSet({test:'knock'})">🚪</button>
+      <button onclick="secSet({test:'sparkle'})">✨</button><button onclick="secSet({test:'speak'})">🗣</button>
+      <button onclick="secSet({test:'song'})">⏭</button><button onclick="secSet({test:'swell'})">🔊</button>
+    </div>
+    <div class="keys"><div style="width:100%;color:var(--mute);font-size:12px">📍 حضور خودکار: وقتی همه‌ی گوشی‌ها از وای‌فای خونه برن، خودش «حالت بیرونم» رو فعال میکنه و موقع برگشتن غیرفعال (نیاز به باز بودن برنامه نداره). تو روتر برای گوشی IP ثابت بذار.</div></div>
+    <div class="keys">
+      <input id="aaPhones" placeholder="IP گوشی‌ها (مثلا 192.168.1.20)">
+      <input id="aaGrace" type="number" min="3" max="120" value="15" style="max-width:56px;flex:none"> دقیقه
+      <button onclick="aaSave()">ثبت</button>
+      <button onclick="secSet({autoaway:{add_me:true}})">📲 همین گوشی رو اضافه کن</button>
+      <button id="aaOn" onclick="secSet({autoaway:{on: !secS.autoaway.on}})">📍 حضور خودکار: خاموش</button>
+    </div>
+    <div class="keys">
+      <button onclick="window.open('/api/snapshot.jpg')">📸 عکس همین الان</button>
+      <button onclick="delCaps()">🗑 پاک کردن عکس‌ها</button>
+    </div>
+    <div class="keys"><div style="width:100%;color:var(--mute);font-size:12px">🛡 وقتی خونه نیستی: عکس وقتی کسی پشت کامپیوتر میشینه، شنیدن صدای بلند با میکروفون (حتما مسلح باشی)، قفل ویندوز، و اعلان فقط وقتی آدم دیده شد.</div></div>
+    <div class="keys">
+      <button id="oPc" onclick="optToggle('pcwatch')">🖥 پشت PC نشست</button>
+      <button id="oNoise" onclick="optToggle('noise')">🎙 صدای بلند</button>
+      <button id="oLock" onclick="optToggle('lock')">🔐 قفل ویندوز</button>
+      <button id="oHuman" onclick="optToggle('human_only')">🧍 فقط آدم</button>
+      <button id="oBoxes" onclick="optToggle('boxes')">▭ کادر روی تصویر</button>
+      <button id="oPerson" onclick="optToggle('person_only')">👤 اعلان فقط آدم</button>
+      <button id="oVideo" onclick="optToggle('video')">🎬 ضبط ویدیو</button>
+      <button onclick="notifyTest()">🔔 تست اعلان</button>
+    </div>
+    <div class="keys">
+      🔉 سقف صدای خودکار <input id="vmax" type="range" min="20" max="100" value="70" style="flex:1" oninput="$('vmaxv').textContent=this.value+'%'" onchange="secSet({vmax: this.value/100})"> <span id="vmaxv">70%</span>
+    </div>
+    <div id="awayst" style="color:var(--acc);font-size:12px;margin:6px 0"></div>
+    <div id="secnote" style="color:var(--mute);font-size:12px;margin:6px 0"></div>
+    <div id="vids" style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0"></div>
+    <div id="evs" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    <div style="margin-top:10px;color:var(--mute);font-size:12px">ورودها به برنامه:</div>
+    <div id="acc" style="white-space:pre;direction:ltr;font-size:11px;color:var(--mute);max-height:130px;overflow:auto;background:var(--card);border-radius:8px;padding:6px"></div>
+  </div>
+  <div id="desk">
+    <div id="wrap"><canvas id="scr" tabindex="0"></canvas><i id="cur"></i></div>
+    <div class="keys">
+      <button onclick="rin({type:'scroll',dy:3})">⬆ اسکرول</button>
+      <button onclick="rin({type:'scroll',dy:-3})">⬇ اسکرول</button>
+      <button onclick="key('enter')">Enter</button><button onclick="key('esc')">Esc</button>
+      <button onclick="key('backspace')">⌫</button><button onclick="key('tab')">Tab</button>
+      <button onclick="key('space')">Space</button><button onclick="key('win')">Win</button>
+      <button onclick="key('alt+tab')">Alt+Tab</button><button onclick="key('ctrl+c')">Ctrl+C</button>
+      <button onclick="key('ctrl+v')">Ctrl+V</button><button onclick="key('f11')">F11</button>
+      <button onclick="key('up')">↑</button><button onclick="key('down')">↓</button>
+      <button onclick="key('left')">←</button><button onclick="key('right')">→</button>
+    </div>
+    <div class="keys">
+      <button id="bMon" onclick="cycleMon()">🖥 مانیتور 1</button>
+      <button id="bQ" onclick="cycleQ()">کیفیت: متوسط</button>
+      <button onclick="window.open('/api/screenshot.png?m='+mon)">📸 اسکرین‌شات</button>
+      <button id="bTp" onclick="toggleTp()">👆 حالت: مستقیم</button>
+    </div>
+    <div class="keys">
+      <button onclick="key('media_volume_down')">🔉</button><button onclick="key('media_volume_up')">🔊</button>
+      <button onclick="key('media_volume_mute')">🔇</button><button onclick="key('media_previous')">⏮</button>
+      <button onclick="key('media_play_pause')">⏯</button><button onclick="key('media_next')">⏭</button>
+    </div>
+    <div class="keys">
+      <button onclick="fmToggle()">📁 فایل‌ها</button>
+      <button onclick="clipGet()">📥 کلیپ‌بورد سیستم</button>
+      <button onclick="clipSet()">📤 ارسال به کلیپ‌بورد</button>
+    </div>
+    <div id="fm"></div>
+    <div class="keys">
+      <input id="runi" placeholder="باز کردن سایت / برنامه / پوشه…">
+      <button onclick="runT()">اجرا</button>
+    </div>
+    <div class="keys">
+      <input id="txt" placeholder="متن برای تایپ…">
+      <button onclick="sendText()">ارسال</button>
+    </div>
+    <div class="keys">
+      <button onclick="power('lock')">🔒 قفل</button>
+      <button onclick="power('sleep')">😴 خواب</button>
+      <button class="danger" onclick="power('restart')">ریستارت</button>
+      <button class="danger" onclick="power('shutdown')">خاموش</button>
+      <button onclick="power('cancel')">لغو</button>
+    </div>
+  </div>
+  <input id="q" placeholder="جستجو…" oninput="render()">
+  <div class="bar"><span id="cnt"></span><span id="stat"></span>
+    <span><label style="cursor:pointer">⬆ آپلود<input type="file" id="up" accept="audio/*" multiple hidden></label> &nbsp; <button onclick="rescan()">↻ اسکن</button></span></div>
+  <div class="bar" id="net" style="direction:ltr;justify-content:flex-start;flex-wrap:wrap;gap:10px;margin-top:4px"></div>
+  <div id="list"></div>
+</div>
+
+<script>
+// ---- اتصال مقاوم: هر درخواست timeout داره؛ بدون این، یه اتصال نیمه‌باز (مثلا بعد از رفتن از وای‌فای به دیتا) کل صفحه رو تا ریلود گیر میداد
+const _fetch = window.fetch.bind(window);
+window.fetch = (url, opt = {}) => {
+  if (opt.signal) return _fetch(url, opt);
+  const ms = /\/api\/upload/.test(String(url)) ? 600000 : 10000;
+  const c = new AbortController(), t = setTimeout(() => c.abort(), ms);
+  return _fetch(url, {...opt, signal: c.signal}).finally(() => clearTimeout(t));
+};
+let lastOk = Date.now();
+
+const $ = id => document.getElementById(id);
+let tracks = [], st = {}, seeking = false, volTouch = 0;
+const fmt = s => { s = Math.max(0, s|0); return (s/60|0) + ':' + String(s%60).padStart(2,'0'); };
+
+async function reauth(){
+  const pw = prompt('برای این کار حساس، رمز رو دوباره وارد کن:');
+  if (!pw) return false;
+  const r = await fetch('/api/reauth', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({password: pw})});
+  if (!r.ok) { alert(r.status === 429 ? 'خیلی تلاش کردی، چند دقیقه صبر کن' : 'رمز اشتباهه'); return false; }
+  return true;
+}
+async function api(path, body, retry = true) {
+  const poll = body === undefined && /^(state|stats|security|access|tracks|nvr\/status)/.test(path);
+  const r = await fetch('/api/' + path, body === undefined ? {headers: poll ? {'X-Poll': '1'} : {}} :
+    {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  lastOk = Date.now();
+  if (r.status === 401) { showLogin(); throw 0; }
+  let j = {}; try { j = await r.json(); } catch (e) {}
+  if (r.status === 403 && j.error === 'reauth') { if (retry && await reauth()) return api(path, body, false); throw 0; }
+  return j;
+}
+async function rawPost(url, fd){
+  let r = await fetch(url, {method:'POST', body: fd});
+  if (r.status === 403 && await reauth()) r = await fetch(url, {method:'POST', body: fd});
+  return r;
+}
+const post = p => api(p, {}).then(apply);
+
+function showLogin(){
+  $('app').style.display='none'; $('login').style.display='block'; loginInfo();
+  if (typeof stopTalk === 'function') { stopTalk(); stopListen(); stopSys(); deskClose(); $('desk').style.display='none'; $('cam').src=''; $('cam').style.display='none'; try { nvrStopAll(); } catch (e) {} }
+}
+async function logout(){ try { await fetch('/api/logout', {method:'POST'}); } catch (e) {} showLogin(); }
+async function loginInfo(){
+  try { const j = await (await fetch('/api/login_info')).json();
+    $('code').style.display = j.need_code ? 'block' : 'none';
+    if (j.blocked) $('err').textContent = 'ورود از بیرون خونه بدون ورود دو مرحله‌ای ممکن نیست. روی کامپیوتر خونه setup-2fa.bat رو اجرا کن.';
+  } catch (e) {}
+}
+async function login(){
+  const r = await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:$('un').value,password:$('pw').value,code:$('code').value})});
+  if (r.ok) { let j = {}; try { j = await r.json(); } catch (e) {}
+    if (j.role === 'viewer') { location.reload(); return; }          // کاربر «فقط‌تماشا» صفحه‌ی دوربین‌ها رو میگیره
+    $('pw').value = ''; $('code').value = ''; $('err').textContent = ''; $('login').style.display='none'; start(); }
+  else { let j = {}; try { j = await r.json(); } catch (e) {}
+    $('err').textContent = r.status===429 ? 'خیلی تلاش کردی، ' + (j.wait ? Math.ceil(j.wait/60) + ' دقیقه' : 'کمی') + ' صبر کن'
+      : j.error === '2fa_required' ? 'ورود از بیرون بدون 2FA مجاز نیست (setup-2fa.bat)' : 'نام کاربری، رمز یا کد اشتباهه'; }
+}
+async function logoutAll(){ if (confirm('از همه‌ی دستگاه‌ها (از جمله همین) خارج بشی؟')) { try { await fetch('/api/logout_all', {method:'POST'}); } catch (e) {} showLogin(); } }
+$('pw').addEventListener('keydown', e => e.key==='Enter' && login());
+$('code').addEventListener('keydown', e => e.key==='Enter' && login());
+
+function apply(s){
+  st = s;
+  $('title').textContent = s.title || 'چیزی در حال پخش نیست';
+  $('artist').textContent = s.artist || '';
+  $('eq').classList.toggle('on', s.playing);
+  $('pp').textContent = s.playing ? '⏸' : '▶';
+  $('shuf').classList.toggle('on', s.shuffle);
+  $('rep').classList.toggle('on', s.repeat !== 'off');
+  $('rep').textContent = s.repeat === 'one' ? '🔂' : '🔁';
+  const d = s.duration || Math.max(s.position, 1);
+  if (!seeking) { $('seek').max = d; $('seek').value = s.position; $('pos').textContent = fmt(s.position); }
+  $('dur').textContent = s.duration ? fmt(s.duration) : '--:--';
+  if (Date.now() - volTouch > 1500) $('vol').value = s.volume;
+  document.querySelectorAll('.item').forEach(el => el.classList.toggle('cur', +el.dataset.id === s.current));
+  mirrorSync(s);
+}
+
+function render(){
+  const q = $('q').value.trim().toLowerCase();
+  const list = tracks.filter(t => !q || (t.title + ' ' + t.artist).toLowerCase().includes(q));
+  $('cnt').textContent = list.length + ' آهنگ';
+  $('list').innerHTML = '';
+  list.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'item' + (t.id === st.current ? ' cur' : '');
+    b.dataset.id = t.id;
+    const a = document.createElement('span');
+    a.textContent = t.title + (t.artist ? ' — ' + t.artist : '');
+    const d = document.createElement('small');
+    d.textContent = t.duration ? fmt(t.duration) : '';
+    b.append(a, d);
+    b.onclick = () => api('play', {id: t.id}).then(apply);
+    $('list').appendChild(b);
+  });
+}
+
+async function rescan(){ await api('rescan', {}); tracks = await api('tracks'); render(); }
+
+$('seek').addEventListener('input', e => { seeking = true; $('pos').textContent = fmt(+e.target.value); });
+$('seek').addEventListener('change', e => { seeking = false; api('seek', {pos: +e.target.value}).then(apply); });
+let volT = 0;
+$('vol').addEventListener('input', e => { volTouch = Date.now(); clearTimeout(volT); const v = +e.target.value; volT = setTimeout(() => api('volume', {value: v}).catch(() => {}), 80); });
+
+let started = false, lastAct = Date.now();
+['pointerdown', 'keydown', 'touchstart', 'wheel'].forEach(ev => addEventListener(ev, () => lastAct = Date.now(), {passive: true}));
+async function start(){
+  $('app').style.display = 'flex';
+  try {
+    tracks = await api('tracks'); render();
+    apply(await api('state'));
+    secLoad(); loadInfo(); loadStats(); loadPrefs();
+    try { nvrRestore(); } catch (e) {}
+    if (started) return;
+    started = true;
+    pollLoop();
+    netWatch();
+  } catch(e) {}
+}
+
+// یه حلقه‌ی پشت‌سرهم (نه چندتا setInterval هم‌زمان): همیشه فقط یه درخواست API در حال اجراست، پس ۶ تا اتصال مرورگر هیچ‌وقت پر نمیشه.
+// وقتی صفحه مخفیه (گوشی قفل/برنامه‌ی دیگه) هیچ درخواستی نمیره.
+async function pollLoop(){
+  let n = 0;
+  for (;;) {
+    const t0 = Date.now();
+    if (!document.hidden) {
+      try { apply(await api('state')); } catch (e) {}
+      if (n % 5 === 0) { await loadStats(); await secLoad(); }
+      if (n % 30 === 0 && Date.now() - lastAct < 60000) { try { await api('ping', {}); } catch (e) {} }
+      n++;
+    }
+    await new Promise(r => setTimeout(r, Math.max(300, 1000 - (Date.now() - t0))));
+  }
+}
+// وقتی کارت تموم شد (صفحه بسته/مخفی شد) همه‌ی پخش‌های زنده بسته میشن تا اتصالی باز نمونه
+function stopLive(){
+  try { stopTalk(); stopListen(); stopSys(); deskClose(); } catch (e) {}
+  try { if ($('cam').style.display === 'block') toggleCam(); } catch (e) {}
+  try { if (nvrOn) toggleNvr(); } catch (e) {}
+  try { $('desk').style.display = 'none'; } catch (e) {}
+}
+addEventListener('pagehide', () => { stopLive(); try { navigator.sendBeacon('/api/bye'); } catch (e) {} });
+function netBar(msg){
+  let b = $('netbar');
+  if (!b) { b = document.createElement('div'); b.id = 'netbar'; b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99;background:#b45309;color:#fff;text-align:center;padding:6px;font-size:13px'; document.body.appendChild(b); }
+  b.textContent = msg || ''; b.style.display = msg ? 'block' : 'none';
+}
+function reloadCam(){ if ($('cam').style.display === 'block') $('cam').src = '/camera.mjpg?' + Date.now(); }
+function recover(){ if (!started) return; api('state').then(apply).catch(() => {}); secLoad(); reloadCam(); }
+let netTimer = null;
+function netWatch(){
+  if (netTimer) return;
+  addEventListener('online', recover);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { stopLive(); try { navigator.sendBeacon('/api/bye'); } catch (e) {} } else { lastOk = Date.now(); recover(); } });
+  $('cam').addEventListener('error', () => setTimeout(reloadCam, 3000));
+  netTimer = setInterval(() => {
+    if (document.hidden) return;
+    const gap = Date.now() - lastOk;
+    netBar(gap > 15000 ? 'اتصال به سرور قطع شده، دارم دوباره وصل میشم…' : '');
+    if (gap > 20000) reloadCam();
+    if (gap > 60000) {                       // همون کاری که خودت دستی میکردی: صفحه رو ریلود کن (حداکثر هر ۳ دقیقه یک بار)
+      const last = +localStorage.getItem('autoReload') || 0;
+      if (Date.now() - last > 180000) { localStorage.setItem('autoReload', Date.now()); location.reload(); }
+    }
+  }, 5000);
+}
+const wsURL = p => (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host + '/ws/' + p;
+let tWS, tCtx, tStream;
+async function toggleTalk(){
+  if (tWS) return stopTalk();
+  if (!navigator.mediaDevices) return alert('برای میکروفون باید با HTTPS وصل بشی (PLAYER_HTTPS=1 یا Tailscale)');
+  try { tStream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}}); }
+  catch(e){ return alert('اجازه میکروفون داده نشد'); }
+  tCtx = new AudioContext();
+  tWS = new WebSocket(wsURL('talk'));
+  tWS.onopen = () => {
+    tWS.send(JSON.stringify({rate: tCtx.sampleRate}));
+    const src = tCtx.createMediaStreamSource(tStream);
+    const proc = tCtx.createScriptProcessor(2048, 1, 1);
+    proc.onaudioprocess = e => {
+      if (tWS.readyState !== 1) return;
+      const f = e.inputBuffer.getChannelData(0), o = new Int16Array(f.length);
+      for (let i = 0; i < f.length; i++) o[i] = Math.max(-1, Math.min(1, f[i])) * 32767;
+      tWS.send(o.buffer);
+    };
+    src.connect(proc); proc.connect(tCtx.destination);
+    $('bTalk').classList.add('on'); $('bTalk').textContent = '🎤 در حال صحبت…';
+  };
+  { const w = tWS; w.onmessage = e => { if (typeof e.data === 'string') { try { const j = JSON.parse(e.data); if (j.error) { stopTalk(); alert('صحبت: ' + j.error); } } catch (x) {} } }; w.onclose = () => { if (tWS === w) stopTalk(); }; }
+}
+function stopTalk(){
+  if (tWS) { const w = tWS; tWS = null; w.onclose = null; w.close(); }
+  if (tStream) { tStream.getTracks().forEach(t => t.stop()); tStream = null; }
+  if (tCtx) { tCtx.close(); tCtx = null; }
+  $('bTalk').classList.remove('on'); $('bTalk').textContent = '🎤 صحبت';
+}
+let lWS, lCtx, lNext = 0;
+function toggleListen(){
+  if (lWS) return stopListen();
+  lCtx = new AudioContext(); lCtx.resume(); lNext = 0;
+  lWS = new WebSocket(wsURL('listen')); lWS.binaryType = 'arraybuffer';
+  lWS.onmessage = e => {
+    const i16 = new Int16Array(e.data), buf = lCtx.createBuffer(1, i16.length, 16000), ch = buf.getChannelData(0);
+    for (let i = 0; i < i16.length; i++) ch[i] = i16[i] / 32768;
+    const s = lCtx.createBufferSource(); s.buffer = buf; s.connect(lCtx.destination);
+    lNext = Math.max(lNext, lCtx.currentTime + 0.15); s.start(lNext); lNext += buf.duration;
+  };
+  { const w = lWS; w.onclose = () => { if (lWS === w) stopListen(); }; }
+  $('bListen').classList.add('on'); $('bListen').textContent = '👂 در حال گوش دادن…';
+}
+function stopListen(){
+  if (lWS) { const w = lWS; lWS = null; w.onclose = null; w.close(); }
+  if (lCtx) { lCtx.close(); lCtx = null; }
+  $('bListen').classList.remove('on'); $('bListen').textContent = '👂 گوش دادن';
+}
+
+let nvrOn = false, nvrShow = new Set(), nvrTimer = null, nvrInfo = null, nvrBuilt = '';
+function nvrUrl(ch){ return '/camera-nvr.mjpg?ch=' + ch + '&t=' + Date.now(); }
+function nvrSaveUi(shown){ api('nvr', {ui: {open: nvrOn, shown: shown || [...nvrShow]}}).catch(() => {}); }   // وضعیت صفحه روی سرور ذخیره میشه
+function nvrStopAll(){
+  nvrOn = false; nvrShow.clear();
+  if (nvrTimer) { clearInterval(nvrTimer); nvrTimer = null; }
+  const box = $('nvrbox'); if (box) box.style.display = 'none';
+  document.querySelectorAll('#nvrchs img').forEach(i => { i.src = ''; });
+  document.querySelectorAll('#nvrchs > div').forEach(d => { d.style.display = 'none'; });
+  const b = $('bNvr'); if (b) b.classList.remove('on');
+}
+function nvrBuild(s){
+  const key = s.channels.map(c => c.ch).join(',');
+  if (key === nvrBuilt) return;
+  nvrBuilt = key;
+  const btns = $('nvrbtns'), chs = $('nvrchs');
+  btns.innerHTML = ''; chs.innerHTML = '';
+  s.channels.forEach(c => {
+    const b = document.createElement('button'); b.id = 'nvrB' + c.ch; b.textContent = 'کانال ' + c.ch; b.onclick = () => nvrCh(c.ch); btns.appendChild(b);
+    const d = document.createElement('div'); d.id = 'nvrc' + c.ch; d.style.display = 'none'; d.style.marginTop = '8px';
+    d.innerHTML = '<img id="nvri' + c.ch + '" alt="" style="display:block;width:100%;border-radius:10px;background:#000"><pre id="nvrn' + c.ch + '" style="direction:ltr;text-align:left;white-space:pre-wrap;word-break:break-all;font-size:11px;opacity:.85;margin:6px 0 0;user-select:text"></pre>';
+    chs.appendChild(d);
+    d.querySelector('img').addEventListener('error', () => setTimeout(() => { if (nvrShow.has(c.ch)) $('nvri' + c.ch).src = nvrUrl(c.ch); }, 4000));
+  });
+  [['nvrH', () => nvrOpt('hd')], ['nvrE', () => nvrOpt('enhance')], ['nvrW', nvrWatch]].forEach(([id, fn]) => { const x = document.createElement('button'); x.id = id; x.onclick = fn; btns.appendChild(x); });
+  const p = document.createElement('button'); p.textContent = '📷 عکس'; p.onclick = nvrSnap; btns.appendChild(p);
+}
+function nvrUpdate(s){
+  nvrBuild(s);
+  const set = (id, on, txt) => { const x = $(id); if (x) { x.textContent = txt + (on ? ': روشن' : ': خاموش'); x.classList.toggle('on', !!on); } };
+  set('nvrW', s.on, '🛡 تشخیص آدم'); set('nvrH', s.hd, '🎞 کیفیت HD'); set('nvrE', s.enhance, '✨ بهبود کیفیت');
+  s.channels.forEach(c => {
+    const b = $('nvrB' + c.ch); if (b) b.classList.toggle('on', nvrShow.has(c.ch));
+    const n = $('nvrn' + c.ch); if (!n || !nvrShow.has(c.ch)) return;
+    let st = c.state === 'ok' ? '✅ وصل (' + c.name + ')' + (c.hd_active ? ' · HD' : '') + (c.age != null && c.age > 5 ? ' ⚠ ' + c.age + ' ثانیه بدون فریم' : '') : c.state === 'connecting' ? '⏳ در حال وصل شدن…' : c.state === 'error' ? '❌ ' + (c.err || '') : '⏳';
+    if (c.state === 'ok' && s.hd && !c.hd_active) st += '\n⚠ استریم اصلی (HD) پیدا نشد؛ استریم عادی نشون داده میشه';
+    if (s.on && c.watch_broken) st += '\n⚠ تشخیص آدم خراب شد: ' + c.watch_err;
+    if (s.on && c.score != null && !c.watch_broken) st += '\n🧍 تشخیص آدم: بهترین امتیاز ' + c.score + ' · ' + c.det_ms + ' میلی‌ثانیه (۰.۵+ یعنی آدم)';
+    n.textContent = st + (c.state === 'ok' ? '' : '\n' + (c.report || []).join('\n'));
+  });
+}
+async function nvrPoll(){ try { const s = await api('nvr/status'); if (s && s.channels) { nvrInfo = s; nvrUpdate(s); } return s; } catch (e) {} }
+function nvrCh(ch, save = true){
+  const d = $('nvrc' + ch), img = $('nvri' + ch); if (!d) return;
+  if (nvrShow.has(ch)) { nvrShow.delete(ch); d.style.display = 'none'; img.src = ''; }
+  else { nvrShow.add(ch); d.style.display = 'block'; img.src = nvrUrl(ch); }
+  if (nvrInfo) nvrUpdate(nvrInfo);
+  if (save) nvrSaveUi();
+}
+async function toggleNvr(restore){
+  if (nvrOn) { nvrStopAll(); return; }
+  nvrOn = true; $('nvrbox').style.display = 'block'; $('bNvr').classList.add('on');
+  const s = await nvrPoll();
+  if (!nvrOn) return;
+  if (s && s.enabled && !nvrShow.size && s.channels.length) {
+    const want = restore && s.ui && Array.isArray(s.ui.shown) ? s.ui.shown.filter(c => s.channels.some(x => x.ch === c)) : [];
+    (want.length ? want : [s.channels[0].ch]).forEach(c => nvrCh(c, false));
+  } else if (s && !s.enabled) $('nvrchs').textContent = 'NVR_IP تو start.bat تنظیم نشده (یا opencv نصب نیست)';
+  nvrTimer = setInterval(nvrPoll, 2500);
+}
+async function nvrClick(){            // کلیک خودت: وضعیت روی سرور ذخیره میشه (بستن خودکار صفحه/قفل گوشی ذخیره نمیشه)
+  const before = [...nvrShow];
+  await toggleNvr();
+  nvrSaveUi(nvrOn ? undefined : (before.length ? before : (nvrInfo && nvrInfo.ui ? nvrInfo.ui.shown : [])));
+}
+async function nvrRestore(){          // بعد از ورود: اگه دفعه‌ی قبل NVR باز بود، همون‌طور باز میشه
+  if (nvrOn) return;
+  const s = await api('nvr/status');
+  if (s && s.enabled && s.ui && s.ui.open) await toggleNvr(true);
+}
+async function nvrOpt(k){
+  if (!nvrInfo) return;
+  try { const s = await api('nvr', {[k]: !nvrInfo[k]}); if (s && s.channels) { nvrInfo = s; nvrUpdate(s); } else if (s && s.error) alert(s.error); } catch (e) {}
+}
+async function nvrWatch(){ return nvrOpt('on'); }
+function nvrSnap(){
+  const ch = nvrShow.size ? [...nvrShow][0] : (nvrInfo && nvrInfo.channels[0] ? nvrInfo.channels[0].ch : 1);
+  window.open('/api/nvr/snapshot.jpg?ch=' + ch, '_blank');
+}
+function toggleCam(){
+  const on = $('cam').style.display !== 'block';
+  $('cam').style.display = on ? 'block' : 'none';
+  $('cam').src = on ? '/camera.mjpg?' + Date.now() : '';
+  $('bCam').classList.toggle('on', on);
+}
+
+let mon = 1, nMon = 1, qual = 1, dws = null, chain = Promise.resolve(), pend = 0, tpad = false;
+const Q = [{w:800,q:45,fps:12,n:'کم'},{w:1280,q:60,fps:20,n:'متوسط'},{w:1920,q:75,fps:25,n:'بالا'}];
+const rin = d => {
+  if (dws && dws.readyState === 1) {
+    if (d.type === 'move' && dws.bufferedAmount > 1000) return;
+    dws.send(JSON.stringify({m:mon, ...d})); return;
+  }
+  if (d.type === 'move' && pend > 1) return;
+  pend++;
+  chain = chain.then(() => api('input', {m:mon, ...d})).catch(() => {}).then(() => { pend--; });
+  return chain;
+};
+const sendCfg = () => dws && dws.readyState === 1 && dws.send(JSON.stringify({cfg:{m:mon, w:Q[qual].w, q:Q[qual].q, fps:Q[qual].fps}}));
+function savePrefs(){ api('prefs', {mon, qual, tpad}).catch(() => {}); }
+function showPrefs(){ $('bMon').textContent = '🖥 مانیتور ' + mon; $('bQ').textContent = 'کیفیت: ' + Q[qual].n; $('bTp').textContent = tpad ? '🖱 حالت: تاچ‌پد' : '👆 حالت: مستقیم'; }
+async function loadPrefs(){ try { const p = await api('prefs'); mon = p.mon || 1; qual = Math.min(2, Math.max(0, p.qual)); tpad = !!p.tpad; showPrefs(); } catch (e) {} }
+function cycleMon(){ mon = mon % nMon + 1; showPrefs(); sendCfg(); savePrefs(); }
+function cycleQ(){ qual = (qual + 1) % 3; showPrefs(); sendCfg(); savePrefs(); }
+function toggleTp(){ tpad = !tpad; showPrefs(); savePrefs(); }
+let latest = null, painting = false;
+async function paint(){
+  if (painting) return; painting = true;
+  while (latest) {
+    const b = latest; latest = null;
+    try {
+      const bmp = await createImageBitmap(b), c = $('scr');
+      if (c.width !== bmp.width || c.height !== bmp.height) { c.width = bmp.width; c.height = bmp.height; }
+      c.getContext('2d').drawImage(bmp, 0, 0); bmp.close();
+    } catch(e) {}
+  }
+  painting = false;
+}
+function deskOpen(){
+  dws = new WebSocket(wsURL('desk'));
+  dws.onopen = sendCfg;
+  dws.onmessage = e => {
+    if (typeof e.data === 'string') {
+      const d = JSON.parse(e.data);
+      if (d.c) { const c = $('cur'); c.style.left = d.c[0] * 100 + '%'; c.style.top = d.c[1] * 100 + '%'; c.style.display = 'block'; }
+      return;
+    }
+    latest = e.data; paint();
+  };
+  { const w = dws; w.onclose = () => { if (dws === w) dws = null; }; }
+}
+function deskClose(){ if (dws) { const w = dws; dws = null; w.onclose = null; w.close(); } }
+async function loadInfo(){
+  try {
+    const i = await api('info'); nMon = i.monitors;
+    $('net').innerHTML = i.urls.map(u => '<span>🌐 ' + u + '</span>').join('');
+    if (i.mode === 'service') $('net').innerHTML += '<span>🛠 حالت سرویس (قبل از ورود به ویندوز): موزیک، وب‌کم، دسکتاپ و صدا بعد از ورود به ویندوز فعال میشن</span>';
+  } catch(e) {}
+}
+async function loadStats(){
+  try { const s = await api('stats');
+    if (s.cpu !== undefined) $('stat').textContent = `CPU ${Math.round(s.cpu)}% · RAM ${Math.round(s.ram)}%` + (s.battery != null ? ` · 🔋${Math.round(s.battery)}%` : '');
+  } catch(e) {}
+}
+$('up').addEventListener('change', async e => {
+  const fd = new FormData(); [...e.target.files].forEach(f => fd.append('files', f));
+  $('cnt').textContent = 'در حال آپلود…';
+  await fetch('/api/upload', {method:'POST', body:fd}); e.target.value = '';
+  tracks = await api('tracks'); render();
+});
+const key = k => rin({type:'key', key:k});
+function sendText(){ const t = $('txt').value; if (t) { rin({type:'type', text:t}); $('txt').value = ''; } }
+function power(a){
+  const names = {lock:'قفل', sleep:'خواب', restart:'ریستارت', shutdown:'خاموش کردن'};
+  if (a === 'cancel' || confirm('مطمئنی؟ ' + names[a])) api('power', {action:a}).catch(() => {});
+}
+function toggleDesk(){
+  const on = $('desk').style.display !== 'block';
+  $('desk').style.display = on ? 'block' : 'none';
+  $('bDesk').classList.toggle('on', on);
+  if (on) { deskOpen(); $('scr').focus(); } else deskClose();
+}
+const spos = e => { const r = $('scr').getBoundingClientRect(); return {x:(e.clientX - r.left) / r.width, y:(e.clientY - r.top) / r.height}; };
+let tapTimer = null, ps = null;
+const scr = $('scr');
+function tap(p){
+  const mk = extra => tpad ? {type:'clickhere', ...extra} : {type:'click', ...p, ...extra};
+  if (tapTimer) { clearTimeout(tapTimer); tapTimer = null; rin(mk({double:true})); }
+  else tapTimer = setTimeout(() => { tapTimer = null; rin(mk({})); }, 220);
+}
+scr.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  scr.focus(); scr.setPointerCapture(e.pointerId);
+  ps = {p: spos(e), cx: e.clientX, cy: e.clientY, lx: e.clientX, ly: e.clientY, drag: false, long: false, last: 0};
+  ps.timer = setTimeout(() => {
+    if (ps && !ps.drag) { ps.long = true; rin(tpad ? {type:'clickhere', button:'right'} : {type:'click', ...ps.p, button:'right'}); }
+  }, 600);
+});
+scr.addEventListener('pointermove', e => {
+  if (!ps || ps.long) return;
+  if (tpad) {
+    if (Math.hypot(e.clientX - ps.cx, e.clientY - ps.cy) > 8) { ps.drag = true; clearTimeout(ps.timer); }
+    if (Date.now() - ps.last > 25) {
+      const r = scr.getBoundingClientRect();
+      rin({type:'rel', dx:(e.clientX - ps.lx) / r.width * 1.8, dy:(e.clientY - ps.ly) / r.width * 1.8});
+      ps.lx = e.clientX; ps.ly = e.clientY; ps.last = Date.now();
+    }
+    return;
+  }
+  if (!ps.drag && Math.hypot(e.clientX - ps.cx, e.clientY - ps.cy) > 10) {
+    ps.drag = true; clearTimeout(ps.timer);
+    rin({type:'move', ...ps.p}); rin({type:'down', ...ps.p});
+  }
+  if (ps.drag && Date.now() - ps.last > 30) { ps.last = Date.now(); rin({type:'move', ...spos(e)}); }
+});
+scr.addEventListener('pointerup', e => {
+  if (!ps) return;
+  clearTimeout(ps.timer); const s = ps; ps = null;
+  if (s.drag) { if (!tpad) rin({type:'up', ...spos(e)}); return; }
+  if (!s.long) tap(s.p);
+});
+scr.addEventListener('pointercancel', () => { if (ps) { clearTimeout(ps.timer); ps = null; } });
+const KM = {Enter:'enter',Escape:'esc',Backspace:'backspace',Tab:'tab',ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',Delete:'delete',Home:'home',End:'end',PageUp:'page_up',PageDown:'page_down',' ':'space'};
+scr.addEventListener('keydown', e => {
+  const k = KM[e.key] || (/^F\d+$/.test(e.key) ? e.key.toLowerCase() : (e.key.length === 1 ? e.key.toLowerCase() : null));
+  if (!k) return;
+  e.preventDefault();
+  const mods = [e.ctrlKey && 'ctrl', e.altKey && 'alt', e.metaKey && 'win'].filter(Boolean);
+  if (mods.length || k.length > 1) rin({type:'key', key:[...mods, ...(e.shiftKey && k.length > 1 ? ['shift'] : []), k].join('+')});
+  else rin({type:'type', text:e.key});
+});
+$('scr').addEventListener('contextmenu', e => { e.preventDefault(); rin({type:'click', ...spos(e), button:'right'}); });
+$('scr').addEventListener('wheel', e => { e.preventDefault(); rin({type:'scroll', dy: e.deltaY > 0 ? -2 : 2}); }, {passive:false});
+$('txt').addEventListener('keydown', e => e.key === 'Enter' && sendText());
+
+// ---------- صدای سیستم ----------
+let sWS, sCtx, sNext = 0, sCfg = {rate:32000, ch:2};
+function toggleSys(){
+  if (sWS) return stopSys();
+  sCtx = new AudioContext(); sCtx.resume(); sNext = 0;
+  sWS = new WebSocket(wsURL('sysaudio') + (qual === 0 ? '?q=lo' : '')); sWS.binaryType = 'arraybuffer';
+  sWS.onmessage = e => {
+    if (typeof e.data === 'string') { const d = JSON.parse(e.data); if (d.error) { alert(d.error); stopSys(); } else sCfg = d; return; }
+    if (!sCtx) return;
+    const i16 = new Int16Array(e.data), n = (i16.length / sCfg.ch) | 0, buf = sCtx.createBuffer(sCfg.ch, n, sCfg.rate);
+    for (let c = 0; c < sCfg.ch; c++) { const ch = buf.getChannelData(c); for (let i = 0; i < n; i++) ch[i] = i16[i * sCfg.ch + c] / 32768; }
+    if (sNext - sCtx.currentTime > 1) return;
+    const s = sCtx.createBufferSource(); s.buffer = buf; s.connect(sCtx.destination);
+    sNext = Math.max(sNext, sCtx.currentTime + 0.2); s.start(sNext); sNext += buf.duration;
+  };
+  { const w = sWS; w.onclose = () => { if (sWS === w) stopSys(); }; }
+  $('bSys').classList.add('on'); $('bSys').textContent = '🔊 در حال پخش صدای سیستم…';
+}
+function stopSys(){
+  if (sWS) { const w = sWS; sWS = null; w.onclose = null; w.onmessage = null; w.close(); }
+  if (sCtx) { sCtx.close(); sCtx = null; }
+  $('bSys').classList.remove('on'); $('bSys').textContent = '🔊 صدای سیستم';
+}
+
+// ---------- شنیدن همزمان روی گوشی (آهنگ همچنان تو خونه پخش میشه) ----------
+let mirror = false, mid = null;
+const au = new Audio();
+const SILENT = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAABErAAABAAgAZGF0YQAAAAA=';
+function mirrorSync(s){
+  if (!mirror) return;
+  if (s.current === null) { au.pause(); return; }
+  if (s.current !== mid) {
+    mid = s.current;
+    au.src = '/api/stream/' + mid;
+    au.addEventListener('canplay', function f(){
+      au.removeEventListener('canplay', f);
+      au.currentTime = Math.max(0, st.position + 0.3);
+      if (st.playing) au.play().catch(() => {});
+    });
+    return;
+  }
+  if (!s.playing) { if (!au.paused) au.pause(); return; }
+  if (au.paused) au.play().catch(() => {});
+  if (au.readyState >= 2 && Math.abs(au.currentTime - s.position) > 1.5) au.currentTime = s.position + 0.3;
+}
+function toggleLocal(){
+  mirror = !mirror;
+  $('bLocal').classList.toggle('on', mirror);
+  if (mirror) {
+    au.src = SILENT; au.play().catch(() => {});   // باز کردن قفل پخش خودکار مرورگر با همین لمس
+    mid = null; $('bLocal').textContent = '🎧 همزمان روی گوشی';
+    api('state').then(apply);
+  } else { au.pause(); $('bLocal').textContent = '🎧 شنیدن همزمان'; }
+}
+
+// ---------- فایل / کلیپ‌بورد / اجرا ----------
+let fmPath = '';
+function fmToggle(){
+  const on = $('fm').style.display !== 'block';
+  $('fm').style.display = on ? 'block' : 'none';
+  if (on) fsLoad('');
+}
+async function fsLoad(path){
+  const d = await api('fs/list?path=' + encodeURIComponent(path));
+  if (d.error) return alert(d.error);
+  fmPath = d.path;
+  const box = $('fm'); box.innerHTML = '';
+  const head = document.createElement('div'); head.style.cssText = 'direction:ltr;color:var(--mute);padding:4px'; head.textContent = d.path || 'Drives'; box.appendChild(head);
+  const mk = (txt, fn) => { const b = document.createElement('button'); b.textContent = txt; b.style.direction = 'ltr'; b.onclick = fn; box.appendChild(b); return b; };
+  if (d.parent !== null) mk('⬆ ..', () => fsLoad(d.parent));
+  d.dirs.forEach(x => mk('📁 ' + x.name, () => fsLoad(x.path)));
+  d.files.forEach(x => { const a = document.createElement('a'); a.href = '/api/fs/download?path=' + encodeURIComponent(x.path); a.style.direction = 'ltr';
+    a.onclick = async ev => { ev.preventDefault(); try { await api('fs/list?path=' + encodeURIComponent(fmPath)); location.href = a.href; } catch (e) {} };
+    a.textContent = '📄 ' + x.name + '  (' + (x.size / 1048576).toFixed(1) + ' MB)'; box.appendChild(a); });
+  if (d.path) { const l = document.createElement('label'); l.style.cssText = 'display:block;padding:8px;cursor:pointer;color:var(--acc)'; l.textContent = '⬆ آپلود به این پوشه';
+    const i = document.createElement('input'); i.type = 'file'; i.multiple = true; i.hidden = true;
+    i.onchange = async () => { const fd = new FormData(); fd.append('path', fmPath); [...i.files].forEach(f => fd.append('files', f));
+      const r = await rawPost('/api/fs/upload', fd); if (!r.ok) alert('آپلود نشد'); fsLoad(fmPath); };
+    l.appendChild(i); box.appendChild(l); }
+}
+async function clipGet(){ const d = await api('clipboard'); $('txt').value = d.text || ''; }
+async function clipSet(){ const d = await api('clipboard', {text: $('txt').value}); if (d.error) alert(d.error); }
+async function runT(){ const t = $('runi').value.trim(); if (!t) return; const d = await api('run', {target: t}); if (d.error) alert(d.error); else $('runi').value = ''; }
+
+// ---------- امنیت ----------
+let secS = {armed:false, auto:'none', sens:1000, siren:false, presence:{on:false,start:17,end:23}, fun:{on:false,level:1,freq:'mid',start:10,end:22}, autoaway:{on:false,phones:[],grace:15}, events:[]}, lastEv = null;
+const SENS = [{v:2500,n:'کم'},{v:1000,n:'متوسط'},{v:400,n:'زیاد'}], AUTO = ['none','music','sounds','smart'], AUTON = {none:'هیچ', music:'پخش موزیک', sounds:'صدا افکت', smart:'هوشمند (تشدید تدریجی)'};
+let evKey = '';
+async function secLoad(){
+  try { renderSec(await api('security')); } catch(e) { return; }
+  if ($('sec').style.display === 'block') { try { $('acc').textContent = (await api('access')).lines.join('\n'); } catch(e) {} }
+}
+async function say(){ const t = $('sayi').value.trim(); if (!t) return; const r = await api('speak', {text: t}); if (r.error) alert('فقط روی ویندوز کار میکنه'); }
+const presArg = on => ({on, start: +$('pFrom').value, end: +$('pTo').value});
+function awayMode(){ secSet({mode: 'away'}); }
+function homeMode(){ secSet({mode: 'home'}); }
+async function secSet(d){
+  if (d.armed && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+  const r = await api('security', d);
+  if (r.error) alert(r.error); else renderSec(r);
+}
+const FREQ = ['low', 'mid', 'high'], FREQN = {low:'کم', mid:'متوسط', high:'زیاد'};
+function funSet(d){ secSet({fun: d}); }
+function funCycle(){ funSet({freq: FREQ[(FREQ.indexOf(secS.fun.freq) + 1) % 3]}); }
+function aaSave(){ secSet({autoaway: {phones: $('aaPhones').value, grace: +$('aaGrace').value}}); }
+async function delCaps(){ if (confirm('همه‌ی عکس‌ها پاک بشن؟')) { await api('captures/delete', {name:'all'}); evKey = ''; secLoad(); } }
+const OPTN = {pcwatch:['oPc','🖥 پشت PC نشست'], noise:['oNoise','🎙 صدای بلند'], lock:['oLock','🔐 قفل ویندوز'], person_only:['oPerson','👤 اعلان فقط آدم'], boxes:['oBoxes','▭ کادر روی تصویر'], human_only:['oHuman','🧍 فقط آدم (باد/برگ/حیوان رد)'], video:['oVideo','🎬 ضبط ویدیو']};
+function optToggle(k){ secSet({opts: {[k]: !(secS.opts || {})[k]}}); }
+async function notifyTest(){ try { const r = await api('notify_test', {}); alert((r.lines || []).join('\n')); } catch (e) {} }
+function secCycleSens(){ const i = Math.max(0, SENS.findIndex(x => x.v === secS.sens)); secSet({sens: SENS[(i + 1) % 3].v}); }
+function secCycleAuto(){ secSet({auto: AUTO[(AUTO.indexOf(secS.auto) + 1) % AUTO.length]}); }
+function secPres(){ secSet({presence:{on: !secS.presence.on, start: +$('pFrom').value, end: +$('pTo').value}}); }
+function toggleSec(){
+  const on = $('sec').style.display !== 'block';
+  $('sec').style.display = on ? 'block' : 'none';
+  $('bSec').classList.toggle('on', on);
+  if (on) secLoad();
+}
+function renderSec(s){
+  secS = s;
+  $('sArm').textContent = '🛡 مسلح: ' + (s.armed ? 'روشن' : 'خاموش'); $('sArm').style.background = s.armed ? 'var(--acc)' : ''; $('sArm').style.color = s.armed ? '#000' : '';
+  Object.entries(OPTN).forEach(([k, [id, t]]) => { const on = (s.opts || {})[k], b = $(id); b.textContent = t + ': ' + (on ? 'روشن' : 'خاموش'); b.style.background = on ? 'var(--acc)' : ''; b.style.color = on ? '#000' : ''; });
+  const f = s.fun || secS.fun, aa = s.autoaway || secS.autoaway;
+  $('fOn').textContent = '✨ سرگرمی: ' + (f.on ? 'روشن' : 'خاموش'); $('fOn').style.background = f.on ? 'var(--acc)' : ''; $('fOn').style.color = f.on ? '#000' : '';
+  $('fLvl').textContent = 'شدت: ' + (f.level === 2 ? 'شدید (آژیر کوتاه هم)' : 'ملایم'); $('fFreq').textContent = 'تکرار: ' + FREQN[f.freq];
+  if (document.activeElement !== $('fFrom')) $('fFrom').value = f.start; if (document.activeElement !== $('fTo')) $('fTo').value = f.end;
+  $('aaOn').textContent = '📍 حضور خودکار: ' + (aa.on ? 'روشن' : 'خاموش'); $('aaOn').style.background = aa.on ? 'var(--acc)' : ''; $('aaOn').style.color = aa.on ? '#000' : '';
+  if (document.activeElement !== $('aaPhones')) $('aaPhones').value = (aa.phones || []).join(', ');
+  if (document.activeElement !== $('aaGrace')) $('aaGrace').value = aa.grace;
+  if (document.activeElement !== $('vmax') && s.vmax) { $('vmax').value = Math.round(s.vmax * 100); $('vmaxv').textContent = Math.round(s.vmax * 100) + '%'; }
+  const sv = SENS.find(x => x.v === s.sens); $('sSens').textContent = 'حساسیت: ' + (sv ? sv.n : s.sens);
+  $('sAuto').textContent = 'واکنش: ' + AUTON[s.auto];
+  { const aw = s.presence.away, on = s.armed && s.presence.on && f.on;
+    const b = $('bAway'); if (b) { b.style.background = aw ? 'var(--acc)' : ''; b.style.color = aw ? '#000' : ''; }
+    const st = $('awayst'); if (st) st.textContent = aw
+      ? ('🚪 حالت بیرونم فعاله: دوربین ' + (s.armed ? '✅' : '❌') + ' · شبیه‌ساز حضور ' + (s.presence.on ? '✅' : '❌') + ' · سرگرمی ' + (f.on ? '✅' : '❌')
+        + ' · ' + (s.presence.phase === 'on' ? 'الان موزیک پخش میشه' : 'الان موزیک ساکته (بین نوبت‌ها)')
+        + (s.presence.tracks ? '' : ' · ⚠ آهنگی تو پوشه‌ی music نیست، فقط صدای تو-خونه پخش میشه')
+        + (s.presence.sounds ? '' : ' · پوشه‌ی sounds خالیه (صدای ساختگی قدم/در)'))
+      : (s.armed || s.presence.on || f.on ? '⚠ بعضی چیزا روشنن ولی «حالت بیرونم» فعال نیست' : ''); }
+  { const n = s.nvr || {}, on = (b, id, t) => { const e = $(id); if (!e) return; e.textContent = t + ': ' + (b ? 'روشن' : 'خاموش'); e.style.background = b ? 'var(--acc)' : ''; e.style.color = b ? '#000' : ''; };
+    on(n.on, 'sNvr', '📹 تشخیص NVR'); on(n.hd, 'sNvrHd', '🎞 HD'); on(n.enhance, 'sNvrEn', '✨ بهبود');
+    const st = $('nvrst'); if (st) st.textContent = !n.enabled ? '⚠ NVR تنظیم نشده (NVR_IP تو start.bat) یا opencv نصب نیست' : (n.channels || []).map(c => 'کانال ' + c.ch + ': ' + ({ok: '✅ وصله', connecting: '⏳ در حال اتصال', error: '❌ ' + (c.err || 'خطا'), idle: '⏸ بی‌کار'}[c.state] || c.state) + (c.events ? ' · ' + c.events + ' رویداد' : '') + (c.person_ago != null ? ' · آدم ' + Math.round(c.person_ago / 60) + ' دقیقه پیش' : '')).join('  |  ') + (n.on ? '' : '  (تشخیص خاموشه؛ «حالت بیرونم» روشنش میکنه)'); }
+  $('sSiren').textContent = s.siren ? '🚨 قطع آژیر' : '🚨 آژیر';
+  $('sPres').textContent = '🏠 شبیه‌سازی حضور: ' + (s.presence.on ? 'روشن' : 'خاموش');
+  if (document.activeElement !== $('pFrom')) $('pFrom').value = s.presence.start;
+  if (document.activeElement !== $('pTo')) $('pTo').value = s.presence.end;
+  $('secnote').textContent = (s.disk_free_gb != null && s.disk_free_gb < 3 ? '💾 هارد کم‌جاست (' + s.disk_free_gb + ' گیگ)؛ قدیمی‌ترین عکس/ویدیوها پاک میشن. ' : '') + (s.locked ? '🔒 ویندوز قفله؛ دسکتاپ و کیبورد از راه دور کار نمیکنن (محدودیت ویندوز). با AnyDesk یا حضوری باز کن، یا گزینه‌ی «🔐 قفل ویندوز» رو خاموش کن. ' : '') + (s.camera_err ? '⚠ ' + s.camera_err + ' ' : (s.armed && !s.camera_live ? '⚠ دوربین تصویر نمیده. ' : '')) + (s.gate_broken ? '⚠ تشخیص آدم خطا داد و موقتا حالت حرکت ساده فعاله (پنجره‌ی سرور رو ببین). ' : '') + (s.gate_err ? '⚠ تشخیص آدم: ' + s.gate_err + ' ' : '') + (s.armed && s.audio && !s.audio.ok ? '⚠ میکروفون برای صدای ویدیو باز نشد' + (s.audio.err ? ': ' + s.audio.err : '') + ' ' : '') + (s.audio && !s.audio.ffmpeg ? '⚠ ffmpeg نیست؛ ویدیوها بی‌صدا میشن ' : '') + (s.notify ? 'اعلان روی گوشی فعاله (حتی بدون باز بودن برنامه).' : '⚠ اعلان بیرونی (ntfy / تلگرام / بله) تنظیم نشده؛ بدون اون فقط وقتی این صفحه بازه خبردار میشی.') + (s.detector ? ' · تشخیص آدم: ' + (s.detector === 'HOG' ? 'ساده (HOG)، مدل دقیق‌تر دانلود نشده' : s.detector) : '') + (aa.on ? ' · 📍 ' + (aa.state === 'away' ? 'همه بیرونن' : 'یکی خونه‌ست') : '') + (s.sounds ? ' · ' + s.sounds + ' صدای دلخواه' : '');
+  const vk = (s.videos || []).join(',');
+  if ($('vids').dataset.k !== vk) { $('vids').dataset.k = vk; $('vids').innerHTML = '';
+    (s.videos || []).forEach(n => { const a = document.createElement('a'); a.href = '/api/capture/' + n; a.target = '_blank';
+      a.style.cssText = 'font-size:12px;color:var(--acc);text-decoration:none;border:1px solid var(--line,#333);border-radius:8px;padding:4px 8px';
+      a.textContent = '🎬 ' + (n.includes('-p') ? '👤 ' : '') + n.slice(4,6) + '/' + n.slice(6,8) + ' ' + n.slice(9,11) + ':' + n.slice(11,13) + ':' + n.slice(13,15); $('vids').appendChild(a); }); }
+  const key = s.events.slice(0, 12).map(e => e.name).join(',');
+  const box = $('evs');
+  if (key !== evKey) { evKey = key; box.innerHTML = '';
+  s.events.slice(0, 12).forEach(e => {
+    const a = document.createElement('a'); a.href = '/api/capture/' + e.name; a.target = '_blank'; a.style.cssText = 'width:48%;font-size:11px;color:var(--mute);text-decoration:none';
+    const n = e.name; a.innerHTML = ''; const im = document.createElement('img'); im.src = '/api/capture/' + n; im.style.cssText = 'width:100%;border-radius:8px;display:block';
+    const t = document.createElement('div'); t.textContent = (e.person ? '👤 ' : '') + n.slice(4,6) + '/' + n.slice(6,8) + ' ' + n.slice(9,11) + ':' + n.slice(11,13) + ':' + n.slice(13,15);
+    a.append(im, t); box.appendChild(a);
+  }); }
+  const top = s.events.length ? s.events[0].name : '';
+  if (lastEv !== null && top && top !== lastEv) {
+    $('alertbar').textContent = s.events[0].person ? '🚨 آدم دیده شد! (لمس کن تا بسته شه)' : '🚨 حرکت تشخیص داده شد! (لمس کن تا بسته شه)'; $('alertbar').style.display = 'block';
+    if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+    if ('Notification' in window && Notification.permission === 'granted') new Notification('🚨 حرکت در خونه');
+  }
+  lastEv = top;
+}
+fetch('/api/state').then(r => r.status === 401 ? showLogin() : start());
+</script>
+</body>
+</html>

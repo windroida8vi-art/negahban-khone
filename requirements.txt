@@ -1,0 +1,15 @@
+flask>=3.1
+flask-sock>=0.7
+pygame-ce>=2.5
+mutagen>=1.47
+sounddevice>=0.4
+opencv-python-headless>=4.8,<5
+cryptography>=42
+mss>=9.0
+pynput>=1.7
+psutil>=5.9
+soundcard>=0.4.4
+pyperclip>=1.8
+numpy>=1.26
+
+imageio-ffmpeg>=0.4.9

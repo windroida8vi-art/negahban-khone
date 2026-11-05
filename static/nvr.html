@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f14">
+<title>دوربین‌ها</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#0b0f14;color:#e8edf2;font-family:system-ui,Tahoma,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%}
+  header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#121821;position:sticky;top:0;z-index:2;border-bottom:1px solid #1f2935}
+  h1{font-size:17px;margin:0}
+  button{background:#1c2430;color:#e8edf2;border:1px solid #2a3544;border-radius:10px;padding:9px 14px;font:inherit;cursor:pointer}
+  button.on{background:#27c46b;color:#06210f;border-color:#27c46b}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px}
+  .cam{margin:8px 14px 14px}
+  .cam img{width:100%;border-radius:12px;background:#000;display:block;min-height:120px}
+  .cam .row{display:flex;justify-content:space-between;align-items:center;margin:6px 2px 0;font-size:13px}
+  .cam a{color:#7fd1ff;text-decoration:none}
+  .st{opacity:.75}
+  #msg{padding:20px 14px;opacity:.8}
+</style>
+</head>
+<body>
+<header><h1>📹 دوربین‌ها</h1><button id="out">خروج</button></header>
+<div class="bar" style="padding-bottom:0"><button id="mHome" style="flex:1;padding:14px">🏠 خونم</button><button id="mAway" style="flex:1;padding:14px">🚪 رفتم بیرون</button></div>
+<div class="bar" id="bar"></div>
+<div id="cams"></div>
+<div id="msg" style="display:none"></div>
+<script>
+const $ = id => document.getElementById(id);
+let shown = new Set(), built = '';
+const url = ch => '/camera-nvr.mjpg?ch=' + ch + '&t=' + Date.now();
+
+async function status(){
+  const r = await fetch('/api/nvr/status', {headers: {'X-Poll': '1'}});
+  if (r.status === 401 || r.status === 403) { location.reload(); throw 0; }
+  return r.json();
+}
+function show(ch, on){
+  const box = $('c' + ch), img = $('i' + ch); if (!box) return;
+  if (on) { shown.add(ch); box.style.display = 'block'; img.src = url(ch); }
+  else { shown.delete(ch); box.style.display = 'none'; img.src = ''; }
+  $('b' + ch).classList.toggle('on', on);
+}
+function build(s){
+  const key = s.channels.map(c => c.ch).join(',');
+  if (key === built) return;
+  built = key; $('bar').innerHTML = ''; $('cams').innerHTML = '';
+  s.channels.forEach(c => {
+    const b = document.createElement('button'); b.id = 'b' + c.ch; b.textContent = 'کانال ' + c.ch;
+    b.onclick = () => show(c.ch, !shown.has(c.ch)); $('bar').appendChild(b);
+    const d = document.createElement('div'); d.className = 'cam'; d.id = 'c' + c.ch; d.style.display = 'none';
+    d.innerHTML = '<img id="i' + c.ch + '" alt=""><div class="row"><span class="st" id="s' + c.ch + '"></span><a href="/api/nvr/snapshot.jpg?ch=' + c.ch + '" target="_blank">📷 عکس</a></div>';
+    $('cams').appendChild(d);
+    const img = d.querySelector('img');
+    img.addEventListener('click', () => { if (img.requestFullscreen) img.requestFullscreen(); });
+    img.addEventListener('error', () => setTimeout(() => { if (shown.has(c.ch)) img.src = url(c.ch); }, 4000));
+    show(c.ch, true);
+  });
+}
+function update(s){
+  $('msg').style.display = s.enabled ? 'none' : 'block';
+  if (!s.enabled) $('msg').textContent = 'دوربین‌ها فعلا در دسترس نیستن.';
+  s.channels.forEach(c => {
+    const el = $('s' + c.ch); if (!el) return;
+    el.textContent = c.state === 'ok' ? (c.age != null && c.age > 8 ? '⚠ تصویر نمیاد' : '') : c.state === 'error' ? '❌ دوربین در دسترس نیست' : '⏳ در حال اتصال…';
+  });
+}
+async function poll(){ try { const s = await status(); build(s); update(s); } catch (e) {} }
+$('out').onclick = async () => { try { await fetch('/api/logout', {method: 'POST'}); } catch (e) {} location.href = '/'; };
+window.addEventListener('pagehide', () => { try { navigator.sendBeacon('/api/bye'); } catch (e) {} });
+function modeShow(s){ $('mAway').classList.toggle('on', !!s.away); $('mHome').classList.toggle('on', !s.away); }
+async function modeCall(method, body){
+  const r = await fetch('/api/mode', {method, headers: {'Content-Type': 'application/json', 'X-Poll': method === 'GET' ? '1' : '0'}, body: body ? JSON.stringify(body) : undefined});
+  return r.json();
+}
+async function modeSet(m){ try { const j = await modeCall('POST', {mode: m}); if (j.error) alert(j.error); else modeShow(j); } catch (e) { alert('نشد؛ اینترنت رو چک کن'); } }
+$('mHome').onclick = () => modeSet('home'); $('mAway').onclick = () => modeSet('away');
+async function modePoll(){ try { modeShow(await modeCall('GET')); } catch (e) {} }
+poll(); setInterval(poll, 3000); modePoll(); setInterval(modePoll, 5000);
+</script>
+</body>
+</html>
